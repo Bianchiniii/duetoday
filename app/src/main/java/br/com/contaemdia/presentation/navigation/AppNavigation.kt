@@ -68,6 +68,7 @@ fun ContaEmDiaNavHost(
                 onBack = { navController.popBackStack() },
                 onEdit = { navController.navigate(Routes.billForm(billId)) },
                 onActionCompleted = { navigateToDashboard() },
+                adsEnabled = adsEnabled,
             )
         }
     }

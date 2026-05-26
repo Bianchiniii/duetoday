@@ -44,6 +44,7 @@ import br.com.contaemdia.core.money.toCurrencyText
 import br.com.contaemdia.domain.model.BillCategory
 import br.com.contaemdia.domain.model.BillSortOption
 import br.com.contaemdia.domain.model.BillStatusFilter
+import br.com.contaemdia.presentation.ads.AdBannerFormat
 import br.com.contaemdia.presentation.ads.AdBanner
 import br.com.contaemdia.presentation.ads.AdPlacement
 import br.com.contaemdia.presentation.components.BillListItem
@@ -103,6 +104,14 @@ fun DashboardScreen(
                 Icon(Icons.Default.Add, contentDescription = "Adicionar conta")
             }
         },
+        bottomBar = {
+            AdBanner(
+                placement = AdPlacement.DashboardBottomBanner,
+                adsEnabled = adsEnabled,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                format = AdBannerFormat.BottomAnchored,
+            )
+        },
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             if (state.isLoading) LinearProgressIndicator(Modifier.fillMaxWidth())
@@ -145,7 +154,7 @@ fun DashboardScreen(
                 }
                 item {
                     AdBanner(
-                        placement = AdPlacement.DashboardBanner,
+                        placement = AdPlacement.DashboardInlineBanner,
                         adsEnabled = adsEnabled,
                     )
                 }

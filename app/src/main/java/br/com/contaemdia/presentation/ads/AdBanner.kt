@@ -18,20 +18,29 @@ import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.AdSize
 import com.google.android.gms.ads.AdView
 
+enum class AdBannerFormat {
+    InlineLarge,
+    BottomAnchored,
+}
+
 @Composable
 fun AdBanner(
     placement: AdPlacement,
     adsEnabled: Boolean,
     modifier: Modifier = Modifier,
+    format: AdBannerFormat = AdBannerFormat.InlineLarge,
 ) {
     if (!adsEnabled) return
 
     val context = LocalContext.current
     val widthDp = LocalConfiguration.current.screenWidthDp
-    val adSize = remember(widthDp) {
-        AdSize.getLargeAnchoredAdaptiveBannerAdSize(context, widthDp)
+    val adSize = remember(format, widthDp) {
+        when (format) {
+            AdBannerFormat.InlineLarge -> AdSize.getLargeAnchoredAdaptiveBannerAdSize(context, widthDp)
+            AdBannerFormat.BottomAnchored -> AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(context, widthDp)
+        }
     }
-    val adView = remember(placement, widthDp) {
+    val adView = remember(placement, format, widthDp) {
         AdView(context).apply {
             adUnitId = placement.adUnitId
             setAdSize(adSize)

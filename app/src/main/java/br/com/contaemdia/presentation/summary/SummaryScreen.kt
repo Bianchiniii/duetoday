@@ -38,6 +38,7 @@ import br.com.contaemdia.core.money.toCurrencyText
 import br.com.contaemdia.domain.model.BillCategory
 import br.com.contaemdia.domain.model.CategorySummary
 import br.com.contaemdia.presentation.ads.AdBanner
+import br.com.contaemdia.presentation.ads.AdBannerFormat
 import br.com.contaemdia.presentation.ads.AdPlacement
 import br.com.contaemdia.presentation.components.SummaryCard
 import br.com.contaemdia.presentation.theme.ContaEmDiaTheme
@@ -83,6 +84,14 @@ fun SummaryScreen(
                 },
             )
         },
+        bottomBar = {
+            AdBanner(
+                placement = AdPlacement.SummaryBottomBanner,
+                adsEnabled = adsEnabled,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                format = AdBannerFormat.BottomAnchored,
+            )
+        },
     ) { padding ->
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(padding),
@@ -117,7 +126,7 @@ fun SummaryScreen(
             }
             item {
                 AdBanner(
-                    placement = AdPlacement.SummaryBanner,
+                    placement = AdPlacement.SummaryInlineBanner,
                     adsEnabled = adsEnabled,
                 )
             }

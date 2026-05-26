@@ -41,6 +41,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import br.com.contaemdia.domain.model.BillStatus
+import br.com.contaemdia.presentation.ads.AdBanner
+import br.com.contaemdia.presentation.ads.AdBannerFormat
+import br.com.contaemdia.presentation.ads.AdPlacement
 import br.com.contaemdia.presentation.theme.ContaEmDiaTheme
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
@@ -51,6 +54,7 @@ fun BillDetailRoute(
     onBack: () -> Unit,
     onEdit: () -> Unit,
     onActionCompleted: () -> Unit,
+    adsEnabled: Boolean,
     viewModel: BillDetailViewModel = koinViewModel(parameters = { parametersOf(billId) }),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -60,6 +64,7 @@ fun BillDetailRoute(
         onBack = onBack,
         onEdit = onEdit,
         onActionCompleted = onActionCompleted,
+        adsEnabled = adsEnabled,
     )
 }
 
@@ -71,6 +76,7 @@ fun BillDetailScreen(
     onBack: () -> Unit,
     onEdit: () -> Unit,
     onActionCompleted: () -> Unit,
+    adsEnabled: Boolean,
 ) {
     var showDeleteDialog by remember { mutableStateOf(false) }
 
@@ -102,6 +108,14 @@ fun BillDetailScreen(
                         Icon(Icons.Default.Edit, contentDescription = "Editar")
                     }
                 },
+            )
+        },
+        bottomBar = {
+            AdBanner(
+                placement = AdPlacement.DetailBottomBanner,
+                adsEnabled = adsEnabled,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                format = AdBannerFormat.BottomAnchored,
             )
         },
     ) { padding ->
@@ -200,6 +214,7 @@ private fun BillDetailPreview() {
             onBack = {},
             onEdit = {},
             onActionCompleted = {},
+            adsEnabled = false,
         )
     }
 }
