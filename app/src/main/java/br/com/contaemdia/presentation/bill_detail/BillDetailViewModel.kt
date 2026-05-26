@@ -18,30 +18,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-data class BillDetailUiState(
-    val isLoading: Boolean = true,
-    val bill: Bill? = null,
-    val title: String = "",
-    val amount: String = "",
-    val dueDate: String = "",
-    val category: String = "",
-    val status: String = "",
-    val recurring: String = "",
-    val notes: String = "",
-    val paidAt: String? = null,
-    val isOverdue: Boolean = false,
-    val message: ResultMessage? = null,
-    val shouldReturnHome: Boolean = false,
-    val error: String? = null,
-)
-
-sealed interface BillDetailEvent {
-    data object MarkPaid : BillDetailEvent
-    data object MarkOpen : BillDetailEvent
-    data object Delete : BillDetailEvent
-    data object ClearMessage : BillDetailEvent
-}
-
 class BillDetailViewModel(
     billId: Long,
     observeBillById: ObserveBillByIdUseCase,
@@ -57,12 +33,9 @@ class BillDetailViewModel(
         viewModelScope.launch {
             observeBillById(billId).collect { bill ->
                 if (bill == null) {
-                    _uiState.update { it.copy(isLoading = false, error = "Conta não encontrada.") }
+                    _uiState.update { it.copy(isLoading = false, error = ERROR_BILL_NOT_FOUND) }
                 } else {
-                    _uiState.value = bill.toDetailState().copy(
-                        shouldReturnHome = _uiState.value.shouldReturnHome,
-                        message = _uiState.value.message,
-                    )
+                    updateBillState(bill)
                 }
             }
         }
@@ -77,20 +50,22 @@ class BillDetailViewModel(
         }
     }
 
+    private fun updateBillState(bill: Bill) {
+        _uiState.value = bill.toDetailState().copy(
+            shouldReturnHome = _uiState.value.shouldReturnHome,
+            message = _uiState.value.message,
+        )
+    }
+
     private fun updatePaid() {
         val bill = _uiState.value.bill ?: return
         viewModelScope.launch {
             markBillPaid(bill)
                 .onSuccess {
                     reminderScheduler.cancel(bill.id)
-                    _uiState.update {
-                        it.copy(
-                            message = ResultMessage(text = "Conta marcada como paga."),
-                            shouldReturnHome = true,
-                        )
-                    }
+                    showSuccessAndReturnHome(MESSAGE_MARKED_PAID)
                 }
-                .onFailure { error -> _uiState.update { it.copy(message = ResultMessage(text = error.message ?: "Falha ao atualizar.")) } }
+                .onFailure { error -> showError(error.message ?: ERROR_UPDATE_BILL) }
         }
     }
 
@@ -100,14 +75,9 @@ class BillDetailViewModel(
             markBillOpen(bill)
                 .onSuccess {
                     reminderScheduler.schedule(bill)
-                    _uiState.update {
-                        it.copy(
-                            message = ResultMessage(text = "Conta reaberta."),
-                            shouldReturnHome = true,
-                        )
-                    }
+                    showSuccessAndReturnHome(MESSAGE_REOPENED)
                 }
-                .onFailure { error -> _uiState.update { it.copy(message = ResultMessage(text = error.message ?: "Falha ao atualizar.")) } }
+                .onFailure { error -> showError(error.message ?: ERROR_UPDATE_BILL) }
         }
     }
 
@@ -117,15 +87,23 @@ class BillDetailViewModel(
             deleteBill(bill)
                 .onSuccess {
                     reminderScheduler.cancel(bill.id)
-                    _uiState.update {
-                        it.copy(
-                            message = ResultMessage(text = "Conta excluída."),
-                            shouldReturnHome = true,
-                        )
-                    }
+                    showSuccessAndReturnHome(MESSAGE_DELETED)
                 }
-                .onFailure { error -> _uiState.update { it.copy(message = ResultMessage(text = error.message ?: "Falha ao excluir.")) } }
+                .onFailure { error -> showError(error.message ?: ERROR_DELETE_BILL) }
         }
+    }
+
+    private fun showSuccessAndReturnHome(message: String) {
+        _uiState.update {
+            it.copy(
+                message = ResultMessage(text = message),
+                shouldReturnHome = true,
+            )
+        }
+    }
+
+    private fun showError(message: String) {
+        _uiState.update { it.copy(message = ResultMessage(text = message)) }
     }
 
     private fun Bill.toDetailState(): BillDetailUiState = BillDetailUiState(
@@ -135,10 +113,23 @@ class BillDetailViewModel(
         amount = amountCents.toCurrencyText(),
         dueDate = dueDate.toBrazilianDate(),
         category = category.label,
-        status = if (status == BillStatus.PAID) "Pago" else "Em aberto",
-        recurring = if (isRecurring) "Mensal" else "Não",
+        status = if (status == BillStatus.PAID) STATUS_PAID else STATUS_OPEN,
+        recurring = if (isRecurring) RECURRENCE_MONTHLY else RECURRENCE_NONE,
         notes = notes.orEmpty(),
         paidAt = paidAt?.toBrazilianDate(),
         isOverdue = isOverdue(),
     )
+
+    private companion object {
+        const val ERROR_BILL_NOT_FOUND = "Conta não encontrada."
+        const val ERROR_UPDATE_BILL = "Falha ao atualizar."
+        const val ERROR_DELETE_BILL = "Falha ao excluir."
+        const val MESSAGE_MARKED_PAID = "Conta marcada como paga."
+        const val MESSAGE_REOPENED = "Conta reaberta."
+        const val MESSAGE_DELETED = "Conta excluída."
+        const val STATUS_PAID = "Pago"
+        const val STATUS_OPEN = "Em aberto"
+        const val RECURRENCE_MONTHLY = "Mensal"
+        const val RECURRENCE_NONE = "Não"
+    }
 }

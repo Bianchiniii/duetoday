@@ -6,14 +6,6 @@ import br.com.contaemdia.domain.model.Bill
 import br.com.contaemdia.domain.model.BillStatus
 import java.time.LocalDate
 
-enum class BillUrgency {
-    OVERDUE,
-    TODAY,
-    NEXT_SEVEN_DAYS,
-    FUTURE,
-    PAID,
-}
-
 data class BillUiModel(
     val id: Long,
     val title: String,
@@ -40,8 +32,11 @@ fun Bill.toUiModel(today: LocalDate = LocalDate.now()): BillUiModel {
         amount = amountCents.toCurrencyText(),
         dueDate = dueDate.toBrazilianDate(),
         category = category.label,
-        status = if (status == BillStatus.PAID) "Pago" else "Em aberto",
+        status = if (status == BillStatus.PAID) STATUS_PAID else STATUS_OPEN,
         urgency = urgency,
         canMarkPaid = status == BillStatus.OPEN,
     )
 }
+
+private const val STATUS_PAID = "Pago"
+private const val STATUS_OPEN = "Em aberto"

@@ -8,13 +8,11 @@ import br.com.contaemdia.domain.model.BillCategory
 import br.com.contaemdia.domain.model.BillSortOption
 import br.com.contaemdia.domain.model.BillStatus
 import br.com.contaemdia.domain.model.BillStatusFilter
-import br.com.contaemdia.domain.model.MonthlySummary
 import br.com.contaemdia.domain.usecase.BuildMonthlySummaryUseCase
 import br.com.contaemdia.domain.usecase.FilterSortBillsUseCase
 import br.com.contaemdia.domain.usecase.MarkBillPaidUseCase
 import br.com.contaemdia.domain.usecase.ObserveBillsByMonthUseCase
 import br.com.contaemdia.notification.BillReminderScheduler
-import br.com.contaemdia.presentation.components.BillUiModel
 import br.com.contaemdia.presentation.components.toUiModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,33 +24,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.YearMonth
-
-data class BillSection(
-    val title: String,
-    val bills: List<BillUiModel>,
-)
-
-data class DashboardUiState(
-    val isLoading: Boolean = true,
-    val error: String? = null,
-    val month: YearMonth = YearMonth.now(),
-    val summary: MonthlySummary = MonthlySummary(0, 0, 0, 0, 0, emptyList(), emptyList()),
-    val sections: List<BillSection> = emptyList(),
-    val statusFilter: BillStatusFilter = BillStatusFilter.ALL,
-    val categoryFilter: BillCategory? = null,
-    val sortOption: BillSortOption = BillSortOption.DUE_DATE_ASC,
-    val message: ResultMessage? = null,
-)
-
-sealed interface DashboardEvent {
-    data object PreviousMonth : DashboardEvent
-    data object NextMonth : DashboardEvent
-    data class ChangeStatusFilter(val filter: BillStatusFilter) : DashboardEvent
-    data class ChangeCategoryFilter(val category: BillCategory?) : DashboardEvent
-    data class ChangeSortOption(val option: BillSortOption) : DashboardEvent
-    data class MarkPaid(val billId: Long) : DashboardEvent
-    data object ClearMessage : DashboardEvent
-}
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class DashboardViewModel(
@@ -72,35 +43,7 @@ class DashboardViewModel(
     val uiState: StateFlow<DashboardUiState> = _uiState.asStateFlow()
 
     init {
-        viewModelScope.launch {
-            combine(month, statusFilter, categoryFilter, sortOption) { selectedMonth, status, category, sort ->
-                FilterInput(selectedMonth, status, category, sort)
-            }
-                .flatMapLatest { input ->
-                    observeBillsByMonth(input.month).combine(
-                        combine(statusFilter, categoryFilter, sortOption) { status, category, sort ->
-                            Triple(status, category, sort)
-                        }
-                    ) { bills, filters -> input.copy(status = filters.first, category = filters.second, sort = filters.third) to bills }
-                }
-                .collect { (input, bills) ->
-                    currentBills.value = bills
-                    val today = LocalDate.now()
-                    val filtered = filterSortBills(bills, input.status, input.category, input.sort, today)
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            error = null,
-                            month = input.month,
-                            summary = buildMonthlySummary(bills, today),
-                            sections = buildSections(filtered, today),
-                            statusFilter = input.status,
-                            categoryFilter = input.category,
-                            sortOption = input.sort,
-                        )
-                    }
-                }
-        }
+        observeDashboard()
     }
 
     fun onEvent(event: DashboardEvent) {
@@ -115,33 +58,82 @@ class DashboardViewModel(
         }
     }
 
+    private fun observeDashboard() {
+        viewModelScope.launch {
+            combine(month, statusFilter, categoryFilter, sortOption) { selectedMonth, status, category, sort ->
+                FilterInput(selectedMonth, status, category, sort)
+            }
+                .flatMapLatest { input ->
+                    observeBillsByMonth(input.month).combine(
+                        combine(statusFilter, categoryFilter, sortOption) { status, category, sort ->
+                            FilterSelection(status, category, sort)
+                        }
+                    ) { bills, filters ->
+                        input.copy(
+                            status = filters.status,
+                            category = filters.category,
+                            sort = filters.sort,
+                        ) to bills
+                    }
+                }
+                .collect { (input, bills) ->
+                    updateDashboardState(input, bills)
+                }
+        }
+    }
+
+    private fun updateDashboardState(input: FilterInput, bills: List<Bill>) {
+        currentBills.value = bills
+        val today = LocalDate.now()
+        val filtered = filterSortBills(bills, input.status, input.category, input.sort, today)
+
+        _uiState.update {
+            it.copy(
+                isLoading = false,
+                error = null,
+                month = input.month,
+                summary = buildMonthlySummary(bills, today),
+                sections = buildSections(filtered, today),
+                statusFilter = input.status,
+                categoryFilter = input.category,
+                sortOption = input.sort,
+            )
+        }
+    }
+
     private fun markPaid(billId: Long) {
         val bill = currentBills.value.firstOrNull { it.id == billId } ?: return
         viewModelScope.launch {
             markBillPaid(bill)
                 .onSuccess {
                     reminderScheduler.cancel(bill.id)
-                    _uiState.update { it.copy(message = ResultMessage(text = "Conta marcada como paga.")) }
+                    _uiState.update { it.copy(message = ResultMessage(text = MESSAGE_MARKED_PAID)) }
                 }
                 .onFailure { error ->
-                    _uiState.update { it.copy(message = ResultMessage(text = error.message ?: "Não foi possível pagar.")) }
+                    _uiState.update { it.copy(message = ResultMessage(text = error.message ?: ERROR_PAY_BILL)) }
                 }
         }
     }
 
     private fun buildSections(bills: List<Bill>, today: LocalDate): List<BillSection> {
         val groups = listOf(
-            "Atrasados" to bills.filter { it.isOverdue(today) },
-            "Vence hoje" to bills.filter { it.isDueToday(today) },
-            "Próximos 7 dias" to bills.filter { it.isDueInNextDays(7, today) },
-            "Próximos vencimentos" to bills.filter {
-                it.status == BillStatus.OPEN && !it.isOverdue(today) && !it.isDueToday(today) && !it.isDueInNextDays(7, today)
+            SECTION_OVERDUE to bills.filter { it.isOverdue(today) },
+            SECTION_DUE_TODAY to bills.filter { it.isDueToday(today) },
+            SECTION_NEXT_SEVEN_DAYS to bills.filter { it.isDueInNextDays(NEXT_DAYS_WINDOW, today) },
+            SECTION_UPCOMING to bills.filter {
+                it.status == BillStatus.OPEN &&
+                    !it.isOverdue(today) &&
+                    !it.isDueToday(today) &&
+                    !it.isDueInNextDays(NEXT_DAYS_WINDOW, today)
             },
-            "Pagos" to bills.filter { it.status == BillStatus.PAID },
+            SECTION_PAID to bills.filter { it.status == BillStatus.PAID },
         )
+
         return groups
             .filter { it.second.isNotEmpty() }
-            .map { (title, sectionBills) -> BillSection(title, sectionBills.map { it.toUiModel(today) }) }
+            .map { (title, sectionBills) ->
+                BillSection(title, sectionBills.map { it.toUiModel(today) })
+            }
     }
 
     private data class FilterInput(
@@ -150,4 +142,21 @@ class DashboardViewModel(
         val category: BillCategory?,
         val sort: BillSortOption,
     )
+
+    private data class FilterSelection(
+        val status: BillStatusFilter,
+        val category: BillCategory?,
+        val sort: BillSortOption,
+    )
+
+    private companion object {
+        const val NEXT_DAYS_WINDOW = 7L
+        const val SECTION_OVERDUE = "Atrasados"
+        const val SECTION_DUE_TODAY = "Vence hoje"
+        const val SECTION_NEXT_SEVEN_DAYS = "Próximos 7 dias"
+        const val SECTION_UPCOMING = "Próximos vencimentos"
+        const val SECTION_PAID = "Pagos"
+        const val MESSAGE_MARKED_PAID = "Conta marcada como paga."
+        const val ERROR_PAY_BILL = "Não foi possível pagar."
+    }
 }

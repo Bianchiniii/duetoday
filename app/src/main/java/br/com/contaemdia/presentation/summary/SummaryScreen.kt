@@ -29,10 +29,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import br.com.contaemdia.R
 import br.com.contaemdia.core.date.toBrazilianMonth
 import br.com.contaemdia.core.money.toCurrencyText
 import br.com.contaemdia.domain.model.BillCategory
@@ -71,7 +73,7 @@ fun SummaryScreen(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
-                title = { Text("Resumo mensal") },
+                title = { Text(stringResource(R.string.summary_title)) },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     titleContentColor = MaterialTheme.colorScheme.onPrimary,
@@ -79,7 +81,7 @@ fun SummaryScreen(
                 ),
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.content_description_back))
                     }
                 },
             )
@@ -102,26 +104,18 @@ fun SummaryScreen(
                 item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
             }
             item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    IconButton(onClick = { onEvent(SummaryEvent.PreviousMonth) }) {
-                        Icon(Icons.Default.ChevronLeft, contentDescription = "Mês anterior")
-                    }
-                    Text(state.month.toBrazilianMonth(), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                    IconButton(onClick = { onEvent(SummaryEvent.NextMonth) }) {
-                        Icon(Icons.Default.ChevronRight, contentDescription = "Próximo mês")
-                    }
-                }
+                SummaryMonthHeader(
+                    month = state.month.toBrazilianMonth(),
+                    onPrevious = { onEvent(SummaryEvent.PreviousMonth) },
+                    onNext = { onEvent(SummaryEvent.NextMonth) },
+                )
             }
             item {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    SummaryCard("Total geral", state.summary.totalCents.toCurrencyText(), Modifier.width(160.dp))
-                    SummaryCard("Pago", state.summary.paidCents.toCurrencyText(), Modifier.width(160.dp))
-                    SummaryCard("Aberto", state.summary.openCents.toCurrencyText(), Modifier.width(160.dp))
-                    SummaryCard("Atrasado", state.summary.overdueCents.toCurrencyText(), Modifier.width(160.dp), MaterialTheme.colorScheme.error)
+                    SummaryCard(stringResource(R.string.summary_total_general), state.summary.totalCents.toCurrencyText(), Modifier.width(SUMMARY_CARD_WIDTH))
+                    SummaryCard(stringResource(R.string.summary_paid), state.summary.paidCents.toCurrencyText(), Modifier.width(SUMMARY_CARD_WIDTH))
+                    SummaryCard(stringResource(R.string.summary_open), state.summary.openCents.toCurrencyText(), Modifier.width(SUMMARY_CARD_WIDTH))
+                    SummaryCard(stringResource(R.string.summary_overdue), state.summary.overdueCents.toCurrencyText(), Modifier.width(SUMMARY_CARD_WIDTH), MaterialTheme.colorScheme.error)
                 }
             }
             item {
@@ -131,21 +125,21 @@ fun SummaryScreen(
                 )
             }
             item {
-                Text("Por categoria", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.summary_by_category), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             }
             if (state.summary.byCategory.isEmpty()) {
-                item { Text("Nenhuma conta cadastrada neste mês.", color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                item { Text(stringResource(R.string.summary_empty_month), color = MaterialTheme.colorScheme.onSurfaceVariant) }
             } else {
                 items(state.summary.byCategory) { item ->
                     SummaryLine(
                         title = item.category.label,
-                        subtitle = "${item.count} conta(s)",
+                        subtitle = stringResource(R.string.summary_bill_count, item.count),
                         value = item.totalCents.toCurrencyText(),
                     )
                 }
             }
             item {
-                Text("Maiores contas", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.summary_biggest_bills), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             }
             items(state.summary.biggestBills) { bill ->
                 SummaryLine(
@@ -154,6 +148,23 @@ fun SummaryScreen(
                     value = bill.amountCents.toCurrencyText(),
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun SummaryMonthHeader(month: String, onPrevious: () -> Unit, onNext: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        IconButton(onClick = onPrevious) {
+            Icon(Icons.Default.ChevronLeft, contentDescription = stringResource(R.string.content_description_month_previous))
+        }
+        Text(month, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        IconButton(onClick = onNext) {
+            Icon(Icons.Default.ChevronRight, contentDescription = stringResource(R.string.content_description_month_next))
         }
     }
 }
@@ -196,3 +207,5 @@ private fun SummaryPreview() {
         )
     }
 }
+
+private val SUMMARY_CARD_WIDTH = 160.dp

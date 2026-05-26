@@ -1,3 +1,65 @@
 <resources>
     <string name="app_name">Conta em Dia</string>
+
+    <string name="content_description_add_bill">Adicionar conta</string>
+    <string name="content_description_back">Voltar</string>
+    <string name="content_description_edit">Editar</string>
+    <string name="content_description_month_previous">Mês anterior</string>
+    <string name="content_description_month_next">Próximo mês</string>
+    <string name="content_description_monthly_summary">Resumo mensal</string>
+    <string name="content_description_select_date">Selecionar data</string>
+
+    <string name="dashboard_priority_title">Prioridade de pagamento</string>
+    <string name="dashboard_priority_description">Veja primeiro o que está atrasado, vence hoje ou está perto de vencer.</string>
+    <string name="dashboard_empty_title">Nenhuma conta neste mês</string>
+    <string name="dashboard_empty_description">Use o botão de adicionar para cadastrar seu primeiro boleto.</string>
+    <string name="dashboard_summary_total">Total</string>
+    <string name="dashboard_summary_paid">Pago</string>
+    <string name="dashboard_summary_open">Aberto</string>
+    <string name="dashboard_summary_overdue">Atrasado</string>
+    <string name="dashboard_summary_next_days">7 dias</string>
+    <string name="dashboard_filter_all_categories">Todas categorias</string>
+
+    <string name="bill_form_title_new">Nova conta</string>
+    <string name="bill_form_title_edit">Editar conta</string>
+    <string name="bill_form_label_title">Nome da conta</string>
+    <string name="bill_form_label_amount">Valor</string>
+    <string name="bill_form_amount_support">Use apenas números e vírgula. Exemplo: 120,50</string>
+    <string name="bill_form_label_due_date">Data de vencimento</string>
+    <string name="bill_form_due_date_support">Formato: dd/MM/aaaa</string>
+    <string name="bill_form_label_category">Categoria</string>
+    <string name="bill_form_recurring_title">Recorrente mensal</string>
+    <string name="bill_form_recurring_description">Gera a próxima ocorrência ao pagar</string>
+    <string name="bill_form_label_notes">Observação opcional</string>
+    <string name="bill_form_save">Salvar conta</string>
+    <string name="bill_form_save_changes">Salvar alterações</string>
+    <string name="dialog_confirm">Confirmar</string>
+    <string name="dialog_cancel">Cancelar</string>
+
+    <string name="bill_detail_title">Detalhe da conta</string>
+    <string name="bill_detail_value">Valor</string>
+    <string name="bill_detail_due_date">Vencimento</string>
+    <string name="bill_detail_category">Categoria</string>
+    <string name="bill_detail_status">Status</string>
+    <string name="bill_detail_recurrence">Recorrência</string>
+    <string name="bill_detail_paid_at">Pago em</string>
+    <string name="bill_detail_notes">Observação</string>
+    <string name="bill_detail_reopen">Reabrir</string>
+    <string name="bill_detail_pay">Pagar conta</string>
+    <string name="bill_detail_delete">Excluir</string>
+    <string name="bill_detail_delete_title">Excluir conta?</string>
+    <string name="bill_detail_delete_message">Essa ação remove a conta do aparelho.</string>
+    <string name="bill_detail_overdue">Conta atrasada</string>
+
+    <string name="summary_title">Resumo mensal</string>
+    <string name="summary_total_general">Total geral</string>
+    <string name="summary_paid">Pago</string>
+    <string name="summary_open">Aberto</string>
+    <string name="summary_overdue">Atrasado</string>
+    <string name="summary_by_category">Por categoria</string>
+    <string name="summary_empty_month">Nenhuma conta cadastrada neste mês.</string>
+    <string name="summary_biggest_bills">Maiores contas</string>
+    <string name="summary_bill_count">%1$d conta(s)</string>
+
+    <string name="bill_list_pay">Pagar</string>
 </resources>

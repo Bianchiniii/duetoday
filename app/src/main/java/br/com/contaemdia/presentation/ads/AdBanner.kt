@@ -24,11 +24,6 @@ import com.google.android.gms.ads.AdSize
 import com.google.android.gms.ads.AdView
 import com.google.android.gms.ads.LoadAdError
 
-enum class AdBannerFormat {
-    InlineLarge,
-    BottomAnchored,
-}
-
 @Composable
 fun AdBanner(
     placement: AdPlacement,

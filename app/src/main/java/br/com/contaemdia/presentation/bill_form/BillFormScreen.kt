@@ -33,6 +33,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -41,10 +42,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import br.com.contaemdia.R
 import br.com.contaemdia.core.date.parseBrazilianDateOrNull
 import br.com.contaemdia.core.date.toBrazilianDate
 import br.com.contaemdia.core.date.toLocalDateFromUtcMillis
@@ -89,7 +92,7 @@ fun BillFormScreen(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
-                title = { Text(if (state.isEditing) "Editar conta" else "Nova conta") },
+                title = { Text(if (state.isEditing) stringResource(R.string.bill_form_title_edit) else stringResource(R.string.bill_form_title_new)) },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     titleContentColor = MaterialTheme.colorScheme.onPrimary,
@@ -97,7 +100,7 @@ fun BillFormScreen(
                 ),
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.content_description_back))
                     }
                 },
             )
@@ -114,7 +117,7 @@ fun BillFormScreen(
             OutlinedTextField(
                 value = state.title,
                 onValueChange = { onEvent(BillFormEvent.TitleChanged(it)) },
-                label = { Text("Nome da conta") },
+                label = { Text(stringResource(R.string.bill_form_label_title)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 isError = state.error?.contains("nome", ignoreCase = true) == true,
@@ -122,11 +125,11 @@ fun BillFormScreen(
             OutlinedTextField(
                 value = state.amount,
                 onValueChange = { onEvent(BillFormEvent.AmountChanged(it)) },
-                label = { Text("Valor") },
+                label = { Text(stringResource(R.string.bill_form_label_amount)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                supportingText = { Text("Use apenas números e vírgula. Exemplo: 120,50") },
+                supportingText = { Text(stringResource(R.string.bill_form_amount_support)) },
                 isError = state.error?.contains("valor", ignoreCase = true) == true,
             )
             DateInputField(
@@ -134,7 +137,7 @@ fun BillFormScreen(
                 onValueChange = { onEvent(BillFormEvent.DueDateChanged(it)) },
                 isError = state.error?.contains("data", ignoreCase = true) == true,
             )
-            Text(text = "Categoria", style = MaterialTheme.typography.titleSmall)
+            Text(text = stringResource(R.string.bill_form_label_category), style = MaterialTheme.typography.titleSmall)
             Row(
                 modifier = Modifier.horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -153,8 +156,8 @@ fun BillFormScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column {
-                    Text("Recorrente mensal", style = MaterialTheme.typography.titleSmall)
-                    Text("Gera a próxima ocorrência ao pagar", style = MaterialTheme.typography.bodySmall)
+                    Text(stringResource(R.string.bill_form_recurring_title), style = MaterialTheme.typography.titleSmall)
+                    Text(stringResource(R.string.bill_form_recurring_description), style = MaterialTheme.typography.bodySmall)
                 }
                 Switch(
                     checked = state.isRecurring,
@@ -164,7 +167,7 @@ fun BillFormScreen(
             OutlinedTextField(
                 value = state.notes,
                 onValueChange = { onEvent(BillFormEvent.NotesChanged(it)) },
-                label = { Text("Observação opcional") },
+                label = { Text(stringResource(R.string.bill_form_label_notes)) },
                 modifier = Modifier.fillMaxWidth(),
                 minLines = 3,
             )
@@ -178,7 +181,10 @@ fun BillFormScreen(
                 enabled = !state.isSaving,
             ) {
                 Icon(Icons.Default.Save, contentDescription = null)
-                Text(if (state.isEditing) "Salvar alterações" else "Salvar conta", modifier = Modifier.padding(start = 8.dp))
+                Text(
+                    text = if (state.isEditing) stringResource(R.string.bill_form_save_changes) else stringResource(R.string.bill_form_save),
+                    modifier = Modifier.padding(start = 8.dp),
+                )
             }
         }
     }
@@ -210,15 +216,15 @@ private fun DateInputField(
         OutlinedTextField(
             value = value,
             onValueChange = {},
-            label = { Text("Data de vencimento") },
+            label = { Text(stringResource(R.string.bill_form_label_due_date)) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
             readOnly = true,
-            supportingText = { Text("Formato: dd/MM/aaaa") },
+            supportingText = { Text(stringResource(R.string.bill_form_due_date_support)) },
             isError = isError,
             trailingIcon = {
                 IconButton(onClick = { showPicker = true }) {
-                    Icon(Icons.Default.CalendarMonth, contentDescription = "Selecionar data")
+                    Icon(Icons.Default.CalendarMonth, contentDescription = stringResource(R.string.content_description_select_date))
                 }
             },
         )
@@ -231,7 +237,7 @@ private fun DateInputField(
 
     if (showPicker) {
         val selectedDateMillis = value.parseBrazilianDateOrNull()?.toUtcMillis()
-        val datePickerState = androidx.compose.material3.rememberDatePickerState(
+        val datePickerState = rememberDatePickerState(
             initialSelectedDateMillis = selectedDateMillis,
         )
         DatePickerDialog(
@@ -246,12 +252,12 @@ private fun DateInputField(
                         showPicker = false
                     },
                 ) {
-                    Text("Confirmar")
+                    Text(stringResource(R.string.dialog_confirm))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showPicker = false }) {
-                    Text("Cancelar")
+                    Text(stringResource(R.string.dialog_cancel))
                 }
             },
         ) {

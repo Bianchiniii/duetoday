@@ -35,17 +35,19 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import br.com.contaemdia.R
 import br.com.contaemdia.core.date.toBrazilianMonth
 import br.com.contaemdia.core.money.toCurrencyText
 import br.com.contaemdia.domain.model.BillCategory
 import br.com.contaemdia.domain.model.BillSortOption
 import br.com.contaemdia.domain.model.BillStatusFilter
-import br.com.contaemdia.presentation.ads.AdBannerFormat
 import br.com.contaemdia.presentation.ads.AdBanner
+import br.com.contaemdia.presentation.ads.AdBannerFormat
 import br.com.contaemdia.presentation.ads.AdPlacement
 import br.com.contaemdia.presentation.components.BillListItem
 import br.com.contaemdia.presentation.components.EmptyState
@@ -86,7 +88,7 @@ fun DashboardScreen(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
-                title = { Text("Conta em Dia") },
+                title = { Text(stringResource(R.string.app_name)) },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     titleContentColor = MaterialTheme.colorScheme.onPrimary,
@@ -94,14 +96,17 @@ fun DashboardScreen(
                 ),
                 actions = {
                     IconButton(onClick = onOpenSummary) {
-                        Icon(Icons.Default.Analytics, contentDescription = "Resumo mensal")
+                        Icon(
+                            imageVector = Icons.Default.Analytics,
+                            contentDescription = stringResource(R.string.content_description_monthly_summary),
+                        )
                     }
                 },
             )
         },
         floatingActionButton = {
             FloatingActionButton(onClick = onAddBill) {
-                Icon(Icons.Default.Add, contentDescription = "Adicionar conta")
+                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.content_description_add_bill))
             }
         },
         bottomBar = {
@@ -128,12 +133,12 @@ fun DashboardScreen(
                 item {
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(
-                            text = "Prioridade de pagamento",
+                            text = stringResource(R.string.dashboard_priority_title),
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
                         )
                         Text(
-                            text = "Veja primeiro o que está atrasado, vence hoje ou está perto de vencer.",
+                            text = stringResource(R.string.dashboard_priority_description),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -145,11 +150,11 @@ fun DashboardScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        SummaryCard("Total", state.summary.totalCents.toCurrencyText(), Modifier.width(156.dp), MaterialTheme.colorScheme.primary)
-                        SummaryCard("Pago", state.summary.paidCents.toCurrencyText(), Modifier.width(156.dp), Color(0xFF21894F))
-                        SummaryCard("Aberto", state.summary.openCents.toCurrencyText(), Modifier.width(156.dp), MaterialTheme.colorScheme.secondary)
-                        SummaryCard("Atrasado", state.summary.overdueCents.toCurrencyText(), Modifier.width(156.dp), MaterialTheme.colorScheme.error)
-                        SummaryCard("7 dias", state.summary.dueNextSevenDaysCents.toCurrencyText(), Modifier.width(156.dp), Color(0xFFB98900))
+                        SummaryCard(stringResource(R.string.dashboard_summary_total), state.summary.totalCents.toCurrencyText(), Modifier.width(SUMMARY_CARD_WIDTH), MaterialTheme.colorScheme.primary)
+                        SummaryCard(stringResource(R.string.dashboard_summary_paid), state.summary.paidCents.toCurrencyText(), Modifier.width(SUMMARY_CARD_WIDTH), Color(0xFF21894F))
+                        SummaryCard(stringResource(R.string.dashboard_summary_open), state.summary.openCents.toCurrencyText(), Modifier.width(SUMMARY_CARD_WIDTH), MaterialTheme.colorScheme.secondary)
+                        SummaryCard(stringResource(R.string.dashboard_summary_overdue), state.summary.overdueCents.toCurrencyText(), Modifier.width(SUMMARY_CARD_WIDTH), MaterialTheme.colorScheme.error)
+                        SummaryCard(stringResource(R.string.dashboard_summary_next_days), state.summary.dueNextSevenDaysCents.toCurrencyText(), Modifier.width(SUMMARY_CARD_WIDTH), Color(0xFFB98900))
                     }
                 }
                 item {
@@ -164,8 +169,8 @@ fun DashboardScreen(
                 if (state.sections.isEmpty() && !state.isLoading) {
                     item {
                         EmptyState(
-                            title = "Nenhuma conta neste mês",
-                            description = "Use o botão de adicionar para cadastrar seu primeiro boleto.",
+                            title = stringResource(R.string.dashboard_empty_title),
+                            description = stringResource(R.string.dashboard_empty_description),
                             modifier = Modifier.padding(top = 56.dp),
                         )
                     }
@@ -201,11 +206,11 @@ private fun MonthHeader(month: String, onPrevious: () -> Unit, onNext: () -> Uni
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         IconButton(onClick = onPrevious) {
-            Icon(Icons.Default.ChevronLeft, contentDescription = "Mês anterior")
+            Icon(Icons.Default.ChevronLeft, contentDescription = stringResource(R.string.content_description_month_previous))
         }
         Text(text = month, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
         IconButton(onClick = onNext) {
-            Icon(Icons.Default.ChevronRight, contentDescription = "Próximo mês")
+            Icon(Icons.Default.ChevronRight, contentDescription = stringResource(R.string.content_description_month_next))
         }
     }
 }
@@ -226,7 +231,7 @@ private fun FilterRows(state: DashboardUiState, onEvent: (DashboardEvent) -> Uni
             FilterChip(
                 selected = state.categoryFilter == null,
                 onClick = { onEvent(DashboardEvent.ChangeCategoryFilter(null)) },
-                label = { Text("Todas categorias") },
+                label = { Text(stringResource(R.string.dashboard_filter_all_categories)) },
             )
             BillCategory.entries.forEach { category ->
                 FilterChip(
@@ -262,3 +267,5 @@ private fun DashboardPreview() {
         )
     }
 }
+
+private val SUMMARY_CARD_WIDTH = 156.dp

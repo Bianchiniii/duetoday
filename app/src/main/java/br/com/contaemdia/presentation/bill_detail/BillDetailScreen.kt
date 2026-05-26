@@ -36,10 +36,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import br.com.contaemdia.R
 import br.com.contaemdia.domain.model.BillStatus
 import br.com.contaemdia.presentation.ads.AdBanner
 import br.com.contaemdia.presentation.ads.AdBannerFormat
@@ -91,7 +93,7 @@ fun BillDetailScreen(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
-                title = { Text("Detalhe da conta") },
+                title = { Text(stringResource(R.string.bill_detail_title)) },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     titleContentColor = MaterialTheme.colorScheme.onPrimary,
@@ -100,12 +102,12 @@ fun BillDetailScreen(
                 ),
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.content_description_back))
                     }
                 },
                 actions = {
                     IconButton(onClick = onEdit, enabled = state.bill != null) {
-                        Icon(Icons.Default.Edit, contentDescription = "Editar")
+                        Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.content_description_edit))
                     }
                 },
             )
@@ -132,50 +134,80 @@ fun BillDetailScreen(
                 Text(state.error, color = MaterialTheme.colorScheme.error)
             } else {
                 DetailHeader(state)
-                DetailRow("Valor", state.amount)
-                DetailRow("Vencimento", state.dueDate)
-                DetailRow("Categoria", state.category)
-                DetailRow("Status", state.status)
-                DetailRow("Recorrência", state.recurring)
-                state.paidAt?.let { DetailRow("Pago em", it) }
-                if (state.notes.isNotBlank()) DetailRow("Observação", state.notes)
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    if (state.bill?.status == BillStatus.PAID) {
-                        OutlinedButton(onClick = { onEvent(BillDetailEvent.MarkOpen) }, modifier = Modifier.weight(1f)) {
-                            Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = null)
-                            Text("Reabrir", modifier = Modifier.padding(start = 8.dp))
-                        }
-                    } else {
-                        Button(onClick = { onEvent(BillDetailEvent.MarkPaid) }, modifier = Modifier.weight(1f)) {
-                            Icon(Icons.Default.Payments, contentDescription = null)
-                            Text("Pagar conta", modifier = Modifier.padding(start = 8.dp))
-                        }
-                    }
-                    OutlinedButton(onClick = { showDeleteDialog = true }, modifier = Modifier.weight(1f)) {
-                        Icon(Icons.Default.Delete, contentDescription = null)
-                        Text("Excluir", modifier = Modifier.padding(start = 8.dp))
-                    }
-                }
+                BillDetailRows(state)
+                BillDetailActions(
+                    state = state,
+                    onEvent = onEvent,
+                    onDeleteClick = { showDeleteDialog = true },
+                )
             }
         }
     }
 
     if (showDeleteDialog) {
-        AlertDialog(
-            onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Excluir conta?") },
-            text = { Text("Essa ação remove a conta do aparelho.") },
-            confirmButton = {
-                TextButton(onClick = {
-                    showDeleteDialog = false
-                    onEvent(BillDetailEvent.Delete)
-                }) { Text("Excluir") }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) { Text("Cancelar") }
+        DeleteBillDialog(
+            onDismiss = { showDeleteDialog = false },
+            onConfirm = {
+                showDeleteDialog = false
+                onEvent(BillDetailEvent.Delete)
             },
         )
     }
+}
+
+@Composable
+private fun BillDetailRows(state: BillDetailUiState) {
+    DetailRow(stringResource(R.string.bill_detail_value), state.amount)
+    DetailRow(stringResource(R.string.bill_detail_due_date), state.dueDate)
+    DetailRow(stringResource(R.string.bill_detail_category), state.category)
+    DetailRow(stringResource(R.string.bill_detail_status), state.status)
+    DetailRow(stringResource(R.string.bill_detail_recurrence), state.recurring)
+    state.paidAt?.let { DetailRow(stringResource(R.string.bill_detail_paid_at), it) }
+    if (state.notes.isNotBlank()) DetailRow(stringResource(R.string.bill_detail_notes), state.notes)
+}
+
+@Composable
+private fun BillDetailActions(
+    state: BillDetailUiState,
+    onEvent: (BillDetailEvent) -> Unit,
+    onDeleteClick: () -> Unit,
+) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (state.bill?.status == BillStatus.PAID) {
+            OutlinedButton(onClick = { onEvent(BillDetailEvent.MarkOpen) }, modifier = Modifier.weight(1f)) {
+                Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = null)
+                Text(stringResource(R.string.bill_detail_reopen), modifier = Modifier.padding(start = 8.dp))
+            }
+        } else {
+            Button(onClick = { onEvent(BillDetailEvent.MarkPaid) }, modifier = Modifier.weight(1f)) {
+                Icon(Icons.Default.Payments, contentDescription = null)
+                Text(stringResource(R.string.bill_detail_pay), modifier = Modifier.padding(start = 8.dp))
+            }
+        }
+        OutlinedButton(onClick = onDeleteClick, modifier = Modifier.weight(1f)) {
+            Icon(Icons.Default.Delete, contentDescription = null)
+            Text(stringResource(R.string.bill_detail_delete), modifier = Modifier.padding(start = 8.dp))
+        }
+    }
+}
+
+@Composable
+private fun DeleteBillDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.bill_detail_delete_title)) },
+        text = { Text(stringResource(R.string.bill_detail_delete_message)) },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text(stringResource(R.string.bill_detail_delete))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.dialog_cancel))
+            }
+        },
+    )
 }
 
 @Composable
@@ -190,7 +222,7 @@ private fun DetailHeader(state: BillDetailUiState) {
             Text(state.title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
             Text(state.amount, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
             if (state.isOverdue) {
-                Text("Conta atrasada", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.bill_detail_overdue), color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
             }
         }
     }

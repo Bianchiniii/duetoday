@@ -9,7 +9,6 @@ import br.com.contaemdia.core.money.toCentsOrNull
 import br.com.contaemdia.core.money.toDecimalInput
 import br.com.contaemdia.core.money.toMoneyInput
 import br.com.contaemdia.domain.model.Bill
-import br.com.contaemdia.domain.model.BillCategory
 import br.com.contaemdia.domain.model.RecurrenceType
 import br.com.contaemdia.domain.usecase.ObserveBillByIdUseCase
 import br.com.contaemdia.domain.usecase.SaveBillUseCase
@@ -19,33 +18,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.time.LocalDate
-
-data class BillFormUiState(
-    val isLoading: Boolean = false,
-    val isSaving: Boolean = false,
-    val title: String = "",
-    val amount: String = "",
-    val dueDate: String = LocalDate.now().toBrazilianDate(),
-    val category: BillCategory = BillCategory.OTHER,
-    val isRecurring: Boolean = false,
-    val notes: String = "",
-    val error: String? = null,
-    val message: ResultMessage? = null,
-    val savedBillId: Long? = null,
-    val isEditing: Boolean = false,
-)
-
-sealed interface BillFormEvent {
-    data class TitleChanged(val value: String) : BillFormEvent
-    data class AmountChanged(val value: String) : BillFormEvent
-    data class DueDateChanged(val value: String) : BillFormEvent
-    data class CategoryChanged(val value: BillCategory) : BillFormEvent
-    data class RecurringChanged(val value: Boolean) : BillFormEvent
-    data class NotesChanged(val value: String) : BillFormEvent
-    data object Save : BillFormEvent
-    data object ClearMessage : BillFormEvent
-}
 
 class BillFormViewModel(
     private val billId: Long,
@@ -55,31 +27,12 @@ class BillFormViewModel(
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(BillFormUiState(isLoading = billId > 0, isEditing = billId > 0))
     val uiState: StateFlow<BillFormUiState> = _uiState.asStateFlow()
+
     private var originalBill: Bill? = null
 
     init {
         if (billId > 0) {
-            viewModelScope.launch {
-                observeBillById(billId).collect { bill ->
-                    originalBill = bill
-                    if (bill == null) {
-                        _uiState.update { it.copy(isLoading = false, error = "Conta não encontrada.") }
-                    } else {
-                        _uiState.update {
-                            it.copy(
-                                isLoading = false,
-                                title = bill.title,
-                                amount = bill.amountCents.toDecimalInput(),
-                                dueDate = bill.dueDate.toBrazilianDate(),
-                                category = bill.category,
-                                isRecurring = bill.isRecurring,
-                                notes = bill.notes.orEmpty(),
-                                error = null,
-                            )
-                        }
-                    }
-                }
-            }
+            observeExistingBill()
         }
     }
 
@@ -96,56 +49,94 @@ class BillFormViewModel(
         }
     }
 
-    private fun save() {
-        val state = _uiState.value
-        val amountCents = state.amount.toCentsOrNull()
-        val dueDate = state.dueDate.parseBrazilianDateOrNull()
-        when {
-            state.title.isBlank() -> {
-                _uiState.update { it.copy(error = "Informe o nome da conta.") }
-                return
-            }
-            amountCents == null -> {
-                _uiState.update { it.copy(error = "Informe um valor válido.") }
-                return
-            }
-            dueDate == null -> {
-                _uiState.update { it.copy(error = "Informe uma data no formato dd/MM/aaaa.") }
-                return
+    private fun observeExistingBill() {
+        viewModelScope.launch {
+            observeBillById(billId).collect { bill ->
+                originalBill = bill
+                if (bill == null) {
+                    _uiState.update { it.copy(isLoading = false, error = ERROR_BILL_NOT_FOUND) }
+                } else {
+                    _uiState.update { bill.toFormState() }
+                }
             }
         }
+    }
 
-        val bill = (originalBill ?: Bill(
-            title = state.title,
-            amountCents = amountCents,
-            dueDate = dueDate,
-            category = state.category,
-        )).copy(
-            title = state.title,
-            amountCents = amountCents,
-            dueDate = dueDate,
-            category = state.category,
-            isRecurring = state.isRecurring,
-            recurrenceType = if (state.isRecurring) RecurrenceType.MONTHLY else RecurrenceType.NONE,
-            notes = state.notes,
-        )
+    private fun save() {
+        val state = _uiState.value
+        val validation = validate(state)
+        if (validation != null) {
+            _uiState.update { it.copy(error = validation) }
+            return
+        }
+
+        val amountCents = requireNotNull(state.amount.toCentsOrNull())
+        val dueDate = requireNotNull(state.dueDate.parseBrazilianDateOrNull())
+        val bill = state.toBill(amountCents, dueDate)
 
         viewModelScope.launch {
             _uiState.update { it.copy(isSaving = true, error = null) }
             saveBill(bill)
-                .onSuccess { id ->
-                    reminderScheduler.schedule(bill.copy(id = id))
-                    _uiState.update {
-                        it.copy(
-                            isSaving = false,
-                            message = ResultMessage(text = if (bill.id == 0L) "Conta salva." else "Conta atualizada."),
-                            savedBillId = id,
-                        )
-                    }
-                }
+                .onSuccess { id -> handleSaveSuccess(bill, id) }
                 .onFailure { error ->
-                    _uiState.update { it.copy(isSaving = false, error = error.message ?: "Não foi possível salvar.") }
+                    _uiState.update { it.copy(isSaving = false, error = error.message ?: ERROR_SAVE_BILL) }
                 }
         }
+    }
+
+    private fun validate(state: BillFormUiState): String? = when {
+        state.title.isBlank() -> ERROR_EMPTY_TITLE
+        state.amount.toCentsOrNull() == null -> ERROR_INVALID_AMOUNT
+        state.dueDate.parseBrazilianDateOrNull() == null -> ERROR_INVALID_DATE
+        else -> null
+    }
+
+    private fun handleSaveSuccess(bill: Bill, id: Long) {
+        reminderScheduler.schedule(bill.copy(id = id))
+        _uiState.update {
+            it.copy(
+                isSaving = false,
+                message = ResultMessage(text = if (bill.id == 0L) MESSAGE_BILL_SAVED else MESSAGE_BILL_UPDATED),
+                savedBillId = id,
+            )
+        }
+    }
+
+    private fun Bill.toFormState(): BillFormUiState =
+        _uiState.value.copy(
+            isLoading = false,
+            title = title,
+            amount = amountCents.toDecimalInput(),
+            dueDate = dueDate.toBrazilianDate(),
+            category = category,
+            isRecurring = isRecurring,
+            notes = notes.orEmpty(),
+            error = null,
+        )
+
+    private fun BillFormUiState.toBill(amountCents: Long, dueDate: java.time.LocalDate): Bill =
+        (originalBill ?: Bill(
+            title = title,
+            amountCents = amountCents,
+            dueDate = dueDate,
+            category = category,
+        )).copy(
+            title = title,
+            amountCents = amountCents,
+            dueDate = dueDate,
+            category = category,
+            isRecurring = isRecurring,
+            recurrenceType = if (isRecurring) RecurrenceType.MONTHLY else RecurrenceType.NONE,
+            notes = notes,
+        )
+
+    private companion object {
+        const val ERROR_BILL_NOT_FOUND = "Conta não encontrada."
+        const val ERROR_EMPTY_TITLE = "Informe o nome da conta."
+        const val ERROR_INVALID_AMOUNT = "Informe um valor válido."
+        const val ERROR_INVALID_DATE = "Informe uma data no formato dd/MM/aaaa."
+        const val ERROR_SAVE_BILL = "Não foi possível salvar."
+        const val MESSAGE_BILL_SAVED = "Conta salva."
+        const val MESSAGE_BILL_UPDATED = "Conta atualizada."
     }
 }
