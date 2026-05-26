@@ -1,11 +1,13 @@
 package br.com.contaemdia.presentation.ads
 
+import br.com.contaemdia.BuildConfig
+
 enum class AdPlacement(val adUnitId: String) {
-    DashboardInlineBanner(TEST_BANNER_AD_UNIT_ID),
-    DashboardBottomBanner(TEST_BANNER_AD_UNIT_ID),
-    SummaryInlineBanner(TEST_BANNER_AD_UNIT_ID),
-    SummaryBottomBanner(TEST_BANNER_AD_UNIT_ID),
-    DetailBottomBanner(TEST_BANNER_AD_UNIT_ID),
+    DashboardInlineBanner(BuildConfig.ADMOB_DASHBOARD_INLINE_BANNER_ID),
+    DashboardBottomBanner(BuildConfig.ADMOB_DASHBOARD_BOTTOM_BANNER_ID),
+    SummaryInlineBanner(BuildConfig.ADMOB_SUMMARY_INLINE_BANNER_ID),
+    SummaryBottomBanner(BuildConfig.ADMOB_SUMMARY_BOTTOM_BANNER_ID),
+    DetailBottomBanner(BuildConfig.ADMOB_DETAIL_BOTTOM_BANNER_ID),
 }
 
 object AdMobConfig {
@@ -15,5 +17,3 @@ object AdMobConfig {
     const val SUMMARY_BOTTOM_BANNER_PLACEHOLDER = "summary_bottom_banner"
     const val DETAIL_BOTTOM_BANNER_PLACEHOLDER = "detail_bottom_banner"
 }
-
-private const val TEST_BANNER_AD_UNIT_ID = "ca-app-pub-3940256099942544/9214589741"
